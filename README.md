@@ -4,7 +4,7 @@ This repository contains my [reveal.js][]-based presentation on the C++ ABI
 for [CppCon 2019][].
 
 ## Usage
-Go to https://ldionne.com/abi-for-dummies or open `index.html` with your browser.
+Go to https://ldionne.com/cppcon-2019-abi-for-dummies or open `index.html` with your browser.
 A PDF version of the slides is in `slides.pdf`.
 
 ## Running a local server
