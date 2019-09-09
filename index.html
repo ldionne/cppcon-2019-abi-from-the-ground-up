@@ -1,40 +1,49 @@
 <!doctype html>
 <html>
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<title>reveal.js</title>
+        <title>The C++ ABI for Dummies</title>
 
-		<link rel="stylesheet" href="css/reset.css">
-		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/black.css">
+        <link rel="stylesheet" href="css/reset.css">
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/black.css">
+        <link rel="stylesheet" href="custom.css">
 
-		<!-- Theme used for syntax highlighting of code -->
-		<link rel="stylesheet" href="lib/css/monokai.css">
+        <!-- Theme used for syntax highlighting of code -->
+        <link rel="stylesheet" href="lib/css/monokai.css">
 
-		<!-- Printing and PDF exports -->
-		<script>
-			var link = document.createElement( 'link' );
-			link.rel = 'stylesheet';
-			link.type = 'text/css';
-			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
-			document.getElementsByTagName( 'head' )[0].appendChild( link );
-		</script>
-	</head>
-	<body>
-		<div class="reveal">
-			<div class="slides">
-				        <section data-markdown=""
-				                 data-separator="^====+$"
-				                 data-separator-vertical="^----+$"
-				                 data-notes="^Note:">
-				        <script type="text/template">
+        <!-- Printing and PDF exports -->
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                        <section data-markdown=""
+                                 data-separator="^====+$"
+                                 data-separator-vertical="^----+$"
+                                 data-notes="^Note:">
+                        <script type="text/template">
 
 ## The C++ ABI for Dummies
 <b>Louis Dionne &lt;[@LouisDionne](https://twitter.com/LouisDionne)&gt;</b>
 
 C++ Standard Library Engineer @ Apple
+
+<!--
+TODO:
+- Talk about inline namespaces
+- Talk about ABI tags
+- Explain how your library leaks into user's ABI (even for header-only libraries)
+- Consider talking about TAPI
+-->
 
 ====
 
@@ -60,7 +69,398 @@ int main() {
 
 ====
 
-STUFF HERE
+### What is an ABI?
+
+----
+
+[Wikipedia](https://en.wikipedia.org/wiki/Application_binary_interface):
+
+> An ABI defines how data structures or computational routines are accessed in
+> machine code, which is a low-level, hardware-dependent format [...]
+
+----
+
+> [...] in contrast, an API defines this access in source code, which is a
+> relatively high-level, hardware-independent, often human-readable format.
+
+====
+
+### The Itanium C++ Specification
+
+https://github.com/itanium-cxx-abi/cxx-abi
+
+----
+
+#### Convention followed by vendors
+
+----
+
+#### Describes the ABI for C++ constructs
+
+----
+
+#### Layered on top of the underlying C ABI
+
+====
+
+### A few examples
+
+====
+
+### Passing arguments in C
+
+1. Arguments are passed in registers
+2. Or via the stack
+
+----
+
+### Passing arguments in C++
+
+1. Same as C for trivial types
+2. For non-trivial types:
+    1. Space allocated on the stack
+    2. Caller invokes copy-constructor
+    3. Address passed as a normal argument
+    4. Caller invokes destructor
+
+<!-- https://godbolt.org/z/McHXId -->
+
+====
+
+### Laying out base classes
+
+- Do base class members come before or after the derived class members?
+- Multiple inheritance: left-to-right, right-to-left, something else?
+
+----
+
+### How it works
+
+- Base classes in declaration order
+- Non-static data members in declaration order
+- Virtual bases in inheritance graph order
+
+----
+
+#### This is where EBO takes place
+
+====
+
+### Name mangling in C
+
+```c
+void foo(int); // just 'foo'
+```
+
+----
+
+### Name mangling in C++
+
+Consider overloading, namespaces, etc.
+
+Linker has to know which one to call
+
+```c++
+namespace hello {
+  void foo(int); // mangled as '_ZN5hello3fooEi'
+  void foo(long); // mangled as '_ZN5hello3fooEl'
+}
+```
+
+====
+
+<!-- .slide: class="slide-hidden" -->
+
+```
+_ZN5hello3fooEi
+              ^ int
+         ^^^^ string of length 3 "foo"
+   ^^^^^^ string of length 5 "hello"
+  ^----------^ encodes the name
+^^ just _Z
+```
+
+====
+
+### ABI Stability
+
+Software compiled against one version of a library doesn't need to be
+recompiled in order to use a newer version of the library
+
+====
+
+### Example of breaking ABI
+
+<!-- https://godbolt.org/z/Ubm4lu -->
+
+----
+
+### Library version 1
+
+```c++
+template <typename First, typename Second>
+struct pair {
+  First first;
+  Second second;
+
+  pair(First const& f, Second const& s)
+    : first(first), second(s)
+  { }
+
+  ~pair() { }
+};
+
+void foo(pair<int, int>); // defined in a .cpp
+```
+
+----
+
+### Library version 2
+
+```c++
+template <typename First, typename Second>
+struct pair {
+  First first;
+  Second second;
+
+  pair(First const& f, Second const& s)
+    : first(first), second(s)
+  { }
+
+  ~pair() = default;
+};
+
+void foo(pair<int, int>); // defined in a .cpp
+```
+
+----
+
+### Application
+
+```c++
+#include "library.hpp"
+
+int main() {
+  pair<int, int> x = {3, 5};
+  foo(x);
+
+  // ...
+}
+```
+
+----
+
+### What's the problem?
+
+- `pair` version 2 is trivial when `First` and `Second` are trivial
+- Passed in registers instead of on the stack
+
+----
+
+### Even seemingly innocuous changes can break ABI!
+
+====
+
+### General guidelines
+
+(non-exhaustive)
+
+Taken from:
+- [KDE ABi Guidelines](https://community.kde.org/Policies/Binary_Compatibility_Issues_With_C%2B%2B)
+- [Android ABI Stability document](https://source.android.com/devices/architecture/vndk/abi-stability#ensuring-abi-compliance)
+
+----
+
+### Safe (1/3)
+
+- add new non-virtual functions
+- add a new enum to a class.
+- append new enumerators to an existing enum
+  + make sure the underlying type doesn't change
+
+----
+
+### Safe (2/3)
+
+- define an inline function out-of-line
+  + it must be OK for the program to call the old OR the new implementation
+- remove private non-virtual functions or static members
+  + must not have been used by a function in headers
+
+----
+
+### Safe (3/3)
+
+- add new static data members
+- change default arguments to a method
+  + existing calls will use the old default arguments until recompiled
+- add new classes
+- add or remove friend declarations
+
+====
+
+### Why is ABI stability important?
+
+- Ship libraries to a system and update them without
+  + recompiling other system libraries
+  + recompiling all applications
+- Allows shipping static archives
+
+----
+
+### Costs of ABI Stability
+
+1. Harder to evolve language and library
+2. Performance improvements may be hindered
+
+====
+
+### Controlling your ABI
+
+----
+
+### Symbol visibility
+(for dynamic libraries)
+
+```c++
+#define HIDDEN_VISIBILITY \
+  __attribute__((__visibility__("hidden")))
+
+HIDDEN_VISIBILITY void foo();
+```
+
+----
+
+### Controlling linkage
+(for static libraries)
+
+```c++
+#define INTERNAL_LINKAGE \
+  __attribute__((internal_linkage))
+
+INTERNAL_LINKAGE void foo();
+```
+
+====
+
+### Tools
+
+====
+
+### Looking at exported symbols
+(and their type)
+
+```bash
+$ nm -gmU /usr/lib/libc++.dylib
+[...]
+(indirect)      external __ZNKSt13bad_exception4whatEv (for __ZNKSt13bad_exception4whatEv)
+(indirect)      external __ZNKSt13runtime_error4whatEv (for __ZNKSt13runtime_error4whatEv)
+(__TEXT,__text) external __ZNKSt16nested_exception14rethrow_nestedEv
+(__TEXT,__text) external __ZNKSt18bad_variant_access4whatEv
+(__TEXT,__text) external __ZNKSt19bad_optional_access4whatEv
+(indirect)      external __ZNKSt20bad_array_new_length4whatEv (for __ZNKSt20bad_array_new_length4whatEv)
+(__TEXT,__text) external __ZNKSt3__110__time_put8__do_putEPcRS1_PK2tmcc
+(__TEXT,__text) external __ZNKSt3__110__time_put8__do_putEPwRS1_PK2tmcc
+(__TEXT,__text) external __ZNKSt3__110error_code7messageEv
+(__TEXT,__text) external __ZNKSt3__110moneypunctIcLb0EE11do_groupingEv
+(__TEXT,__text) external __ZNKSt3__110moneypunctIcLb0EE13do_neg_formatEv
+(__TEXT,__text) external __ZNKSt3__110moneypunctIcLb0EE13do_pos_formatEv
+[...]
+```
+
+----
+
+### Protip: `c++filt`
+
+Will demangle anything
+
+```bash
+$ nm -gmU /usr/lib/libc++.dylib | c++filt
+[...]
+(indirect)      external std::bad_exception::what() const (for std::bad_exception::what() const)
+(indirect)      external std::runtime_error::what() const (for std::runtime_error::what() const)
+(__TEXT,__text) external std::nested_exception::rethrow_nested() const
+(__TEXT,__text) external std::bad_variant_access::what() const
+(__TEXT,__text) external std::bad_optional_access::what() const
+(indirect)      external std::bad_array_new_length::what() const (for std::bad_array_new_length::what() const)
+(__TEXT,__text) external std::__1::__time_put::__do_put(char*, char*&, tm const*, char, char) const
+(__TEXT,__text) external std::__1::__time_put::__do_put(wchar_t*, wchar_t*&, tm const*, char, char) const
+(__TEXT,__text) external std::__1::error_code::message() const
+(__TEXT,__text) external std::__1::moneypunct<char, false>::do_grouping() const
+(__TEXT,__text) external std::__1::moneypunct<char, false>::do_neg_format() const
+(__TEXT,__text) external std::__1::moneypunct<char, false>::do_pos_format() const
+[...]
+```
+
+====
+
+### [`libabigail`](http://man7.org/linux/man-pages/man1/abidiff.1.html)
+
+```bash
+$ abidiff libtest-v0.so libtest-v1.so
+Functions changes summary: 0 Removed, 1 Changed, 0 Added function
+Variables changes summary: 0 Removed, 0 Changed, 0 Added variable
+
+1 function with some indirect sub-type change:
+
+  [C]'function void foo(S0*)' has some indirect sub-type changes:
+        parameter 0 of type 'S0*' has sub-type changes:
+          in pointed to type 'struct S0':
+            size changed from 32 to 64 bits
+            1 base class insertion:
+              struct type_base
+            1 data member change:
+             'int S0::m0' offset changed from 0 to 32
+```
+
+<!-- TODO: Use a concrete example with the making-pair-trivial example -->
+
+====
+
+### [Android ABI checker](https://source.android.com/devices/architecture/vndk/abi-stability#ensuring-abi-compliance)
+
+----
+
+### Extracts ABI information from headers
+
+```bash
+$ header-abi-dumper foo.cpp -o foo.sdump
+$ header-abi-linker foo.sdump -o libfoo.lsdump
+```
+
+----
+
+### Allows diffing ABI information
+
+```bash
+$ header-abi-diff -old libfoo_old.lsdump \
+                  -new libfoo_new.lsdump \
+                  -o libfoo.abidiff
+```
+
+----
+
+#### Output
+
+```
+$ cat libfoo.abidiff
+record_type_diffs {
+  fields_diff {
+    old_field {
+      referenced_type: "foo"
+      field_offset: 0
+      field_name: "mfoo"
+      access: public_access
+    }
+    new_field {
+      referenced_type: "foo *"
+      field_offset: 0
+      field_name: "mfoo"
+      access: public_access
+    }
+  }
+}
+```
 
 ====
 
@@ -70,25 +470,28 @@ STUFF HERE
 
 C++ Standard Library Engineer @ Apple
 
-				</script>
-				</section>
-			</div>
-		</div>
+                </script>
+                </section>
+            </div>
+        </div>
 
-		<script src="js/reveal.js"></script>
+        <script src="js/reveal.js"></script>
 
-		<script>
-			// More info about config & dependencies:
-			// - https://github.com/hakimel/reveal.js#configuration
-			// - https://github.com/hakimel/reveal.js#dependencies
-			Reveal.initialize({
-				dependencies: [
-					{ src: 'plugin/markdown/marked.js' },
-					{ src: 'plugin/markdown/markdown.js' },
-					{ src: 'plugin/notes/notes.js', async: true },
-					{ src: 'plugin/highlight/highlight.js', async: true }
-				]
-			});
-		</script>
-	</body>
+        <script>
+            // More info about config & dependencies:
+            // - https://github.com/hakimel/reveal.js#configuration
+            // - https://github.com/hakimel/reveal.js#dependencies
+            Reveal.initialize({
+                slideNumber: "c/t",
+                history: true,
+                transition: 'none',
+                dependencies: [
+                    { src: 'plugin/markdown/marked.js' },
+                    { src: 'plugin/markdown/markdown.js' },
+                    { src: 'plugin/notes/notes.js', async: true },
+                    { src: 'plugin/highlight/highlight.js', async: true }
+                ]
+            });
+        </script>
+    </body>
 </html>

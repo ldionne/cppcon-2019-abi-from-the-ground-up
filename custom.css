@@ -1,0 +1,9 @@
+/* Allow code boxes to be longer */
+.reveal pre code {
+    max-height: 550px;
+}
+
+/* And also wider */
+.reveal pre {
+  width: 110%;
+}
