@@ -351,6 +351,49 @@ HIDDEN_VISIBILITY void foo();
 INTERNAL_LINKAGE void foo();
 ```
 
+----
+
+### Controlling vtable and RTTI visibility
+
+Today
+
+```c++
+// in header
+class __attribute__((__type_visibility__("default"))) Widget {
+public:
+  virtual void draw();
+};
+
+// in library
+void Widget::draw() { /* ... */ } // vtable and RTTI implicitly here
+```
+
+----
+
+### Controlling vtable and RTTI visibility
+
+Wish (http://wg21.link/p1263)
+
+```c++
+// in header
+class Widget {
+public:
+  virtual void draw();
+};
+
+// in library
+// control where and how vtable is instantiated
+extern __attribute__((__visibility__("default"))) Widget::virtual;
+void Widget::draw() { /* ... */ }
+```
+
+----
+
+### Will these attributes ever be Standardized?
+
+- People have tried and failed, so far
+- Different platforms are too different (Windows/Unix)
+
 ====
 
 ### Tools
