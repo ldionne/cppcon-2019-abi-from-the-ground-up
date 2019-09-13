@@ -529,6 +529,7 @@ C++ Standard Library Engineer @ Apple
         </div>
 
         <script src="js/reveal.js"></script>
+        <script src="js/jquery-3.4.1.min.js"></script>
 
         <script>
             // More info about config & dependencies:
@@ -544,6 +545,15 @@ C++ Standard Library Engineer @ Apple
                     { src: 'plugin/notes/notes.js', async: true },
                     { src: 'plugin/highlight/highlight.js', async: true }
                 ]
+            });
+
+            // Remove all DOM elements with the 'slide-hidden' class. This allows
+            // statically marking slides as hidden to exclude them from the
+            // presentation.
+            Reveal.addEventListener('ready', function(event) {
+              $(".slide-hidden").each(function(index, slide) {
+                slide.remove();
+              });
             });
         </script>
     </body>
