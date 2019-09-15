@@ -72,7 +72,8 @@ int main() {
 
 ### Outline
 
-- What's specified in the ABI?
+- Why you care about ABI
+- What's in the ABI?
 - How source changes impact ABI
 - Controlling the ABI
 - Useful tools
@@ -84,6 +85,29 @@ int main() {
 This talk assumes Unix and Itanium ABI
 
 But concepts mostly transfer
+
+====
+
+### Why is ABI stability important?
+
+- Ship libraries to a system and update them without
+  + recompiling other system libraries
+  + recompiling all applications
+- Allows shipping static archives
+
+----
+
+### Breaking it means you need to rebuild
+
+Note:
+Can't rebuild if you don't have sources or no compiler on device, etc.
+
+----
+
+### Costs of ABI Stability
+
+1. Harder to evolve language and library
+2. Performance improvements may be hindered
 
 ====
 
@@ -103,14 +127,7 @@ But concepts mostly transfer
 
 ----
 
-### ABI is like API for machine code
-
-----
-
-### Breaking it means you need to rebuild
-
-Note:
-Can't rebuild if you don't have sources or no compiler on device, etc.
+### So ABI is like API for machine code
 
 ====
 
@@ -325,22 +342,6 @@ Taken from:
   + existing calls will use the old default arguments until recompiled
 - add new classes
 - add or remove friend declarations
-
-====
-
-### Why is ABI stability important?
-
-- Ship libraries to a system and update them without
-  + recompiling other system libraries
-  + recompiling all applications
-- Allows shipping static archives
-
-----
-
-### Costs of ABI Stability
-
-1. Harder to evolve language and library
-2. Performance improvements may be hindered
 
 ====
 
