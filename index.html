@@ -426,18 +426,15 @@ void Widget::draw() { /* ... */ }
 ```bash
 $ nm -gmU /usr/lib/libc++.dylib
 [...]
-(indirect)      external __ZNKSt13bad_exception4whatEv (for __ZNKSt13bad_exception4whatEv)
-(indirect)      external __ZNKSt13runtime_error4whatEv (for __ZNKSt13runtime_error4whatEv)
+(indirect)      external __ZNKSt13bad_exception4whatEv
+                                (for __ZNKSt13bad_exception4whatEv)
+(indirect)      external __ZNKSt13runtime_error4whatEv
+                                (for __ZNKSt13runtime_error4whatEv)
 (__TEXT,__text) external __ZNKSt16nested_exception14rethrow_nestedEv
 (__TEXT,__text) external __ZNKSt18bad_variant_access4whatEv
 (__TEXT,__text) external __ZNKSt19bad_optional_access4whatEv
-(indirect)      external __ZNKSt20bad_array_new_length4whatEv (for __ZNKSt20bad_array_new_length4whatEv)
-(__TEXT,__text) external __ZNKSt3__110__time_put8__do_putEPcRS1_PK2tmcc
-(__TEXT,__text) external __ZNKSt3__110__time_put8__do_putEPwRS1_PK2tmcc
-(__TEXT,__text) external __ZNKSt3__110error_code7messageEv
-(__TEXT,__text) external __ZNKSt3__110moneypunctIcLb0EE11do_groupingEv
-(__TEXT,__text) external __ZNKSt3__110moneypunctIcLb0EE13do_neg_formatEv
-(__TEXT,__text) external __ZNKSt3__110moneypunctIcLb0EE13do_pos_formatEv
+(indirect)      external __ZNKSt20bad_array_new_length4whatEv
+                                (for __ZNKSt20bad_array_new_length4whatEv)
 [...]
 ```
 
@@ -450,18 +447,15 @@ Will demangle anything
 ```bash
 $ nm -gmU /usr/lib/libc++.dylib | c++filt
 [...]
-(indirect)      external std::bad_exception::what() const (for std::bad_exception::what() const)
-(indirect)      external std::runtime_error::what() const (for std::runtime_error::what() const)
+(indirect)      external std::bad_exception::what() const
+                            (for std::bad_exception::what() const)
+(indirect)      external std::runtime_error::what() const
+                            (for std::runtime_error::what() const)
 (__TEXT,__text) external std::nested_exception::rethrow_nested() const
 (__TEXT,__text) external std::bad_variant_access::what() const
 (__TEXT,__text) external std::bad_optional_access::what() const
-(indirect)      external std::bad_array_new_length::what() const (for std::bad_array_new_length::what() const)
-(__TEXT,__text) external std::__1::__time_put::__do_put(char*, char*&, tm const*, char, char) const
-(__TEXT,__text) external std::__1::__time_put::__do_put(wchar_t*, wchar_t*&, tm const*, char, char) const
-(__TEXT,__text) external std::__1::error_code::message() const
-(__TEXT,__text) external std::__1::moneypunct<char, false>::do_grouping() const
-(__TEXT,__text) external std::__1::moneypunct<char, false>::do_neg_format() const
-(__TEXT,__text) external std::__1::moneypunct<char, false>::do_pos_format() const
+(indirect)      external std::bad_array_new_length::what() const
+                            (for std::bad_array_new_length::what() const)
 [...]
 ```
 
