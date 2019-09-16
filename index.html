@@ -427,14 +427,14 @@ void Widget::draw() { /* ... */ }
 $ nm -gmU /usr/lib/libc++.dylib
 [...]
 (indirect)      external __ZNKSt13bad_exception4whatEv
-                                (for __ZNKSt13bad_exception4whatEv)
+                            (for __ZNKSt13bad_exception4whatEv)
 (indirect)      external __ZNKSt13runtime_error4whatEv
-                                (for __ZNKSt13runtime_error4whatEv)
+                            (for __ZNKSt13runtime_error4whatEv)
 (__TEXT,__text) external __ZNKSt16nested_exception14rethrow_nestedEv
 (__TEXT,__text) external __ZNKSt18bad_variant_access4whatEv
 (__TEXT,__text) external __ZNKSt19bad_optional_access4whatEv
 (indirect)      external __ZNKSt20bad_array_new_length4whatEv
-                                (for __ZNKSt20bad_array_new_length4whatEv)
+                            (for __ZNKSt20bad_array_new_length4whatEv)
 [...]
 ```
 
@@ -448,14 +448,14 @@ Will demangle anything
 $ nm -gmU /usr/lib/libc++.dylib | c++filt
 [...]
 (indirect)      external std::bad_exception::what() const
-                            (for std::bad_exception::what() const)
+                        (for std::bad_exception::what() const)
 (indirect)      external std::runtime_error::what() const
-                            (for std::runtime_error::what() const)
+                        (for std::runtime_error::what() const)
 (__TEXT,__text) external std::nested_exception::rethrow_nested() const
 (__TEXT,__text) external std::bad_variant_access::what() const
 (__TEXT,__text) external std::bad_optional_access::what() const
 (indirect)      external std::bad_array_new_length::what() const
-                            (for std::bad_array_new_length::what() const)
+                        (for std::bad_array_new_length::what() const)
 [...]
 ```
 
