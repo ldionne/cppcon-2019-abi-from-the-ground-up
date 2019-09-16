@@ -1,4 +1,4 @@
-## The C++ ABI for dummies
+## The C++ ABI From the Ground Up
 
 This repository contains my [reveal.js][]-based presentation on the C++ ABI
 for [CppCon 2019][].
