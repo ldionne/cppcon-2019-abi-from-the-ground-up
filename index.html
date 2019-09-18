@@ -39,9 +39,8 @@ C++ Standard Library Engineer @ Apple
 
 <!--
 TODO:
-- Talk about inline namespaces
 - Talk about ABI tags
-- Explain how your library leaks into user's ABI (even for header-only libraries)
+- Talk about what ABI stability means for static archives
 - Consider talking about TAPI
 - http://kayari.org/tmp/abi.html
 -->
@@ -237,13 +236,123 @@ recompiled in order to use a newer version of the library
 
 ### Example of breaking ABI
 
+Library v1
+
+```c++
+// in point.hpp
+struct Point {
+  int x;
+  int y;
+};
+
+// defined in libPoint.dylib
+std::vector<Point> getTrajectory();
+```
+
+----
+
+Library v2
+
+```c++
+// in point.hpp
+struct Point {
+  int x;
+  int y;
+  std::optional<int> z;
+};
+
+// defined in libPoint.dylib
+std::vector<Point> getTrajectory();
+```
+
+----
+
+Application
+
+```c++
+#include <iostream>
+#include "point.hpp"
+
+int main() {
+  std::vector<Point> trajectory = getTrajectory();
+  for (Point const& p : trajectory) {
+    std::cout << "x = " << p.x << ", y = " << p.y << '\n';
+  }
+}
+```
+
+----
+
+#### Problem if you don't rebuild application
+
+![Vector has wrong layout because of ABI change](img/abi-vector-layout.png)
+
+====
+
+### Another example
+
+Library v1
+
+```c++
+// in point.hpp
+struct Point {
+  int x;
+  int y;
+};
+
+// defined in libPoint.dylib
+std::vector<Point> getTrajectory();
+```
+
+----
+
+Library v2
+
+```c++
+// in point.hpp
+struct Point {
+  int y;
+  int x;
+};
+
+// defined in libPoint.dylib
+std::vector<Point> getTrajectory();
+```
+
+----
+
+Application
+
+```c++
+#include <iostream>
+#include "point.hpp"
+
+int main() {
+  std::vector<Point> trajectory = getTrajectory();
+  for (Point const& p : trajectory) {
+    std::cout << "x = " << p.x << ", y = " << p.y << '\n';
+  }
+}
+```
+
+----
+
+#### Problem if you don't rebuild application
+
+![Coordinates are inverted](img/abi-coordinate-change.png)
+
+====
+
+### Seemingly innocuous changes can break ABI!
+
 <!-- https://godbolt.org/z/Ubm4lu -->
 
 ----
 
-### Library version 1
+Library v1
 
 ```c++
+// in <pair>
 template <typename First, typename Second>
 struct pair {
   First first;
@@ -255,15 +364,14 @@ struct pair {
 
   ~pair() { }
 };
-
-void foo(pair<int, int>); // defined in a .cpp
 ```
 
 ----
 
-### Library version 2
+Library v2
 
 ```c++
+// in <pair>
 template <typename First, typename Second>
 struct pair {
   First first;
@@ -275,22 +383,29 @@ struct pair {
 
   ~pair() = default;
 };
-
-void foo(pair<int, int>); // defined in a .cpp
 ```
 
 ----
 
-### Application
+In some other library
+
+```c++
+// in libFoo.dylib
+#include <pair>
+
+void foo(pair<int, int>) { ... }
+```
+
+----
+
+Application
 
 ```c++
 #include "library.hpp"
 
 int main() {
-  pair<int, int> x = {3, 5};
-  foo(x);
-
-  // ...
+  pair<int, int> p = {3, 5};
+  foo(p);
 }
 ```
 
@@ -298,12 +413,85 @@ int main() {
 
 ### What's the problem?
 
-- `pair` version 2 is trivial when `First` and `Second` are trivial
+- `pair` v2 is trivial when `First` and `Second` are trivial
 - Passed in registers instead of on the stack
+
+====
+
+### Common misconception 1:
+
+#### Header-only libraries don't care about ABI
+
+====
+
+### Common misconception 2:
+
+#### All ABI issues are solved by static libraries
 
 ----
 
-### Even seemingly innocuous changes can break ABI!
+Headers v1
+
+```c++
+// in two.hpp
+inline int two() { return 2; }
+```
+
+in `libFoo.a`
+
+```c++
+#include "two.hpp"
+#include <iostream>
+void foo() { std::cout << two() << '\n'; }
+```
+
+Application
+
+```c++
+#include "two.hpp"
+void foo(); // defined in libFoo.a
+int main() {
+  foo();
+  two();
+}
+```
+
+<!--
+cat <<EOF | clang++ -xc++ - -O0 -c -o hello.o && ar rcs libHello.a hello.o
+inline int foo() { return 2; }
+void hello() { foo(); }
+EOF
+
+cat <<EOF | clang++ -xc++ - -O0 -L . -lHello -o main
+void hello();
+inline int foo() { return 2; }
+int main() { hello(); foo(); }
+EOF
+
+nm --demangle main
+nm --demangle libHello.a
+-->
+
+----
+
+![Static archive](img/static-archive.png)
+
+----
+
+Headers v2
+
+```c++
+// in two.hpp
+inline int two() { return 1 + 1; }
+```
+
+----
+
+Recompile application (but not static archive)
+
+----
+
+![Static archive ODR violation](img/static-archive-odr.png)
 
 ====
 
@@ -343,11 +531,87 @@ Taken from:
 - add new classes
 - add or remove friend declarations
 
+----
+
+### Unsafe
+
+- pretty much everything else
+
 ====
 
 ### Controlling your ABI
 
+====
+
+### Inline namespaces
+
+<!-- TODO: Show naive example and why we get a link time error, as expected. Only then show why it's not sufficient. -->
+
+Library v1
+
+```c++
+// in <pair>
+namespace std { inline namespace v1 {
+  template <typename First, typename Second>
+  struct pair {
+    // non-trivial version
+  };
+}}
+```
+
 ----
+
+Library v2
+
+```c++
+// in <pair>
+namespace std { inline namespace v2 {
+  template <typename First, typename Second>
+  struct pair {
+    // trivial version
+  };
+}}
+```
+
+----
+
+In some other library
+
+```c++
+// in point.hpp
+class Point {
+  std::pair<int, int> coords;
+
+public:
+  int getX() const { return coords.first; }
+  int getY() const { return coords.second; }
+};
+
+// in libPoint.dylib
+Point getCoordinates();
+```
+
+----
+
+Application
+
+```c++
+#include <iostream>
+#include "point.hpp"
+
+int main() {
+  Point p = getCoordinates();
+  std::cout << "x = " << p.getX() << ", y = " << p.getY() << '\n';
+}
+```
+
+----
+
+### Why are we not saved?
+
+The mangling for `Point` doesn't contain the mangling of `std::pair`
+
+====
 
 ### Symbol visibility
 (for dynamic libraries)

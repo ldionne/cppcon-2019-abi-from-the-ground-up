@@ -7,3 +7,10 @@
 .reveal pre {
   width: 110%;
 }
+
+/* Remove the border and the background from images */
+.reveal section img {
+  background:none;
+  border:none;
+  box-shadow:none;
+}
