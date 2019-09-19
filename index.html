@@ -518,13 +518,9 @@ Taken from:
 
 ### Controlling your ABI
 
-----
-
-<!-- .slide: class="slide-hidden" -->
+====
 
 ### Inline namespaces
-
-<!-- TODO: Show naive example and why we get a link time error, as expected. Only then show why it's not sufficient. -->
 
 Library v1
 
@@ -540,8 +536,6 @@ namespace std { inline namespace v1 {
 
 ----
 
-<!-- .slide: class="slide-hidden" -->
-
 Library v2
 
 ```c++
@@ -556,9 +550,11 @@ namespace std { inline namespace v2 {
 
 ----
 
-<!-- .slide: class="slide-hidden" -->
+#### Not foolproof
 
-In some other library
+Mangling is not viral
+
+----
 
 ```c++
 // in point.hpp
@@ -566,37 +562,13 @@ class Point {
   std::pair<int, int> coords;
 
 public:
-  int getX() const { return coords.first; }
-  int getY() const { return coords.second; }
+  int getX() const { ... }
+  int getY() const { ... }
 };
 
 // in libPoint.dylib
-Point getCoordinates();
+Point getCoordinates() { ... }
 ```
-
-----
-
-<!-- .slide: class="slide-hidden" -->
-
-Application
-
-```c++
-#include <iostream>
-#include "point.hpp"
-
-int main() {
-  Point p = getCoordinates();
-  std::cout << "x = " << p.getX() << ", y = " << p.getY() << '\n';
-}
-```
-
-----
-
-<!-- .slide: class="slide-hidden" -->
-
-### Why are we not saved?
-
-The mangling for `Point` doesn't contain the mangling of `std::pair`
 
 ====
 
