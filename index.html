@@ -240,23 +240,7 @@ struct Point {
 };
 
 // defined in libPoint.dylib
-std::vector<Point> getTrajectory();
-```
-
-----
-
-Library v2
-
-```c++
-// in point.hpp
-struct Point {
-  int x;
-  int y;
-  std::optional<int> z;
-};
-
-// defined in libPoint.dylib
-std::vector<Point> getTrajectory();
+std::vector<Point> getTrajectory() { ... }
 ```
 
 ----
@@ -273,6 +257,22 @@ int main() {
     std::cout << "x = " << p.x << ", y = " << p.y << '\n';
   }
 }
+```
+
+----
+
+Library v2
+
+```c++
+// in point.hpp
+struct Point {
+  int x;
+  int y;
+  std::optional<int> z;
+};
+
+// defined in libPoint.dylib
+std::vector<Point> getTrajectory() { ... }
 ```
 
 ----
@@ -300,21 +300,6 @@ std::vector<Point> getTrajectory();
 
 ----
 
-Library v2
-
-```c++
-// in point.hpp
-struct Point {
-  int y;
-  int x;
-};
-
-// defined in libPoint.dylib
-std::vector<Point> getTrajectory();
-```
-
-----
-
 Application
 
 ```c++
@@ -327,6 +312,21 @@ int main() {
     std::cout << "x = " << p.x << ", y = " << p.y << '\n';
   }
 }
+```
+
+----
+
+Library v2
+
+```c++
+// in point.hpp
+struct Point {
+  int y;
+  int x;
+};
+
+// defined in libPoint.dylib
+std::vector<Point> getTrajectory();
 ```
 
 ----
@@ -346,7 +346,7 @@ int main() {
 Library v1
 
 ```c++
-// in <pair>
+// in <utility>
 template <typename First, typename Second>
 struct pair {
   First first;
@@ -365,7 +365,7 @@ struct pair {
 Library v2
 
 ```c++
-// in <pair>
+// in <utility>
 template <typename First, typename Second>
 struct pair {
   First first;
@@ -381,16 +381,13 @@ struct pair {
 
 ----
 
-In some other library
+In `libFoo.dylib`
 
 ```c++
-// in libFoo.dylib
-#include <pair>
+#include <utility>
 
 void foo(pair<int, int>) { ... }
 ```
-
-----
 
 Application
 
@@ -427,44 +424,28 @@ int main() {
 Headers v1
 
 ```c++
-// in two.hpp
-inline int two() { return 2; }
+// in foo.hpp
+inline int foo() { return 2; }
 ```
 
-in `libFoo.a`
+in `libBar.a`
 
 ```c++
-#include "two.hpp"
-#include <iostream>
-void foo() { std::cout << two() << '\n'; }
+#include "foo.hpp"
+
+void bar() { std::cout << foo() << '\n'; }
 ```
 
 Application
 
 ```c++
-#include "two.hpp"
-void foo(); // defined in libFoo.a
+#include "foo.hpp"
+
 int main() {
-  foo();
-  two();
+  foo(); // from foo.hpp
+  bar(); // from libBar.a
 }
 ```
-
-<!--
-cat <<EOF | clang++ -xc++ - -O0 -c -o hello.o && ar rcs libHello.a hello.o
-inline int foo() { return 2; }
-void hello() { foo(); }
-EOF
-
-cat <<EOF | clang++ -xc++ - -O0 -L . -lHello -o main
-void hello();
-inline int foo() { return 2; }
-int main() { hello(); foo(); }
-EOF
-
-nm --demangle main
-nm --demangle libHello.a
--->
 
 ----
 
@@ -475,8 +456,8 @@ nm --demangle libHello.a
 Headers v2
 
 ```c++
-// in two.hpp
-inline int two() { return 1 + 1; }
+// in foo.hpp
+inline int foo() { return 1 + 1; }
 ```
 
 ----
@@ -520,8 +501,6 @@ Taken from:
 ### Safe (3/3)
 
 - add new static data members
-- change default arguments to a method
-  + existing calls will use the old default arguments until recompiled
 - add new classes
 - add or remove friend declarations
 
@@ -544,7 +523,7 @@ Taken from:
 Library v1
 
 ```c++
-// in <pair>
+// in <utility>
 namespace std { inline namespace v1 {
   template <typename First, typename Second>
   struct pair {
@@ -558,7 +537,7 @@ namespace std { inline namespace v1 {
 Library v2
 
 ```c++
-// in <pair>
+// in <utility>
 namespace std { inline namespace v2 {
   template <typename First, typename Second>
   struct pair {
@@ -611,13 +590,24 @@ The mangling for `Point` doesn't contain the mangling of `std::pair`
 (for dynamic libraries)
 
 ```c++
-#define HIDDEN_VISIBILITY \
+#define HIDDEN \
   __attribute__((__visibility__("hidden")))
 
-HIDDEN_VISIBILITY void foo();
+HIDDEN void foo();
 ```
 
 ----
+
+#### Or, compile with `-fvisibility=hidden`
+
+```c++
+#define VISIBLE \
+  __attribute__((__visibility__("default")))
+
+VISIBLE void foo();
+```
+
+====
 
 ### Controlling linkage
 (for static libraries)
@@ -626,10 +616,22 @@ HIDDEN_VISIBILITY void foo();
 #define INTERNAL_LINKAGE \
   __attribute__((internal_linkage))
 
-INTERNAL_LINKAGE void foo();
+INTERNAL_LINKAGE inline void foo() { ... }
 ```
 
 ----
+
+<!-- .slide: class="slide-hidden" -->
+
+### Have you seen this?
+
+```c++
+template <typename _RandomAccessIterator, typename _Compare>
+_LIBCPP_INLINE_VISIBILITY
+void sort(_RandomAccessIterator, _RandomAccessIterator, _Compare);
+```
+
+====
 
 ### Controlling vtable and RTTI visibility
 
@@ -685,14 +687,11 @@ void Widget::draw() { /* ... */ }
 $ nm -gmU /usr/lib/libc++.dylib
 [...]
 (indirect)      external __ZNKSt13bad_exception4whatEv
-                            (for __ZNKSt13bad_exception4whatEv)
 (indirect)      external __ZNKSt13runtime_error4whatEv
-                            (for __ZNKSt13runtime_error4whatEv)
 (__TEXT,__text) external __ZNKSt16nested_exception14rethrow_nestedEv
 (__TEXT,__text) external __ZNKSt18bad_variant_access4whatEv
 (__TEXT,__text) external __ZNKSt19bad_optional_access4whatEv
 (indirect)      external __ZNKSt20bad_array_new_length4whatEv
-                            (for __ZNKSt20bad_array_new_length4whatEv)
 [...]
 ```
 
@@ -706,14 +705,11 @@ Will demangle anything
 $ nm -gmU /usr/lib/libc++.dylib | c++filt
 [...]
 (indirect)      external std::bad_exception::what() const
-                        (for std::bad_exception::what() const)
 (indirect)      external std::runtime_error::what() const
-                        (for std::runtime_error::what() const)
 (__TEXT,__text) external std::nested_exception::rethrow_nested() const
 (__TEXT,__text) external std::bad_variant_access::what() const
 (__TEXT,__text) external std::bad_optional_access::what() const
 (indirect)      external std::bad_array_new_length::what() const
-                        (for std::bad_array_new_length::what() const)
 [...]
 ```
 
@@ -740,11 +736,15 @@ Variables changes summary: 0 Removed, 0 Changed, 0 Added variable
 
 <!-- TODO: Use a concrete example with the making-pair-trivial example -->
 
-====
+----
+
+<!-- .slide: class="slide-hidden" -->
 
 ### [Android ABI checker](https://source.android.com/devices/architecture/vndk/abi-stability#ensuring-abi-compliance)
 
 ----
+
+<!-- .slide: class="slide-hidden" -->
 
 ### Extracts ABI information from headers
 
@@ -755,6 +755,8 @@ $ header-abi-linker foo.sdump -o libfoo.lsdump
 
 ----
 
+<!-- .slide: class="slide-hidden" -->
+
 ### Allows diffing ABI information
 
 ```bash
@@ -764,6 +766,8 @@ $ header-abi-diff -old libfoo_old.lsdump \
 ```
 
 ----
+
+<!-- .slide: class="slide-hidden" -->
 
 #### Output
 
@@ -786,6 +790,14 @@ record_type_diffs {
   }
 }
 ```
+
+====
+
+### Conclusion
+
+- ABI stability can be important
+- But tricky to maintain
+- Open discussion for the evolution of C++
 
 ====
 
