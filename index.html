@@ -123,8 +123,9 @@ Can't rebuild if you don't have sources or no compiler on device, etc.
 
 ### Costs of ABI Stability
 
-1. Harder to evolve language and library
-2. Performance improvements may be hindered
+- Harder to evolve libraries
+- Performance improvements may be hindered
+- etc...
 
 ====
 
@@ -132,17 +133,9 @@ Can't rebuild if you don't have sources or no compiler on device, etc.
 
 https://github.com/itanium-cxx-abi/cxx-abi
 
-----
-
-#### Convention followed by vendors
-
-----
-
-#### Layered on top of the underlying C ABI
-
-====
-
-### A few examples
+Notes:
+- Just a convention followed by some vendors
+- Layered on top of the underlying C ABI
 
 ====
 
@@ -221,6 +214,15 @@ _ZN5hello3fooEi
 
 ====
 
+### Other things
+
+- Vtable layout
+- RTTI layout
+- Exception handling
+- etc...
+
+====
+
 ### ABI Stability
 
 Software compiled against one version of a library doesn't need to be
@@ -295,7 +297,7 @@ struct Point {
 };
 
 // defined in libPoint.dylib
-std::vector<Point> getTrajectory();
+std::vector<Point> getTrajectory() { ... }
 ```
 
 ----
@@ -326,7 +328,7 @@ struct Point {
 };
 
 // defined in libPoint.dylib
-std::vector<Point> getTrajectory();
+std::vector<Point> getTrajectory() { ... }
 ```
 
 ----
@@ -483,7 +485,7 @@ Taken from:
 ### Safe (1/3)
 
 - add new non-virtual functions
-- add a new enum to a class.
+- add a new enum to a class
 - append new enumerators to an existing enum
   + make sure the underlying type doesn't change
 
@@ -493,9 +495,11 @@ Taken from:
 
 - define an inline function out-of-line
   + it must be OK for the program to call the old OR the new implementation
+
+<!--
 - remove private non-virtual functions or static members
   + must not have been used by a function in headers
-
+ -->
 ----
 
 ### Safe (3/3)
@@ -514,7 +518,9 @@ Taken from:
 
 ### Controlling your ABI
 
-====
+----
+
+<!-- .slide: class="slide-hidden" -->
 
 ### Inline namespaces
 
@@ -534,6 +540,8 @@ namespace std { inline namespace v1 {
 
 ----
 
+<!-- .slide: class="slide-hidden" -->
+
 Library v2
 
 ```c++
@@ -547,6 +555,8 @@ namespace std { inline namespace v2 {
 ```
 
 ----
+
+<!-- .slide: class="slide-hidden" -->
 
 In some other library
 
@@ -566,6 +576,8 @@ Point getCoordinates();
 
 ----
 
+<!-- .slide: class="slide-hidden" -->
+
 Application
 
 ```c++
@@ -579,6 +591,8 @@ int main() {
 ```
 
 ----
+
+<!-- .slide: class="slide-hidden" -->
 
 ### Why are we not saved?
 
@@ -606,6 +620,13 @@ HIDDEN void foo();
 
 VISIBLE void foo();
 ```
+
+----
+
+### Will this be Standardized?
+
+- People have tried and failed, so far
+- Different platforms are too different (Windows/Unix)
 
 ====
 
@@ -639,7 +660,7 @@ Today
 
 ```c++
 // in header
-class __attribute__((__type_visibility__("default"))) Widget {
+class VISIBLE Widget {
 public:
   virtual void draw();
 };
@@ -658,21 +679,12 @@ Wish (http://wg21.link/p1263)
 // in header
 class Widget {
 public:
-  virtual void draw();
+  virtual void draw() { ... }
 };
 
 // in library
-// control where and how vtable is instantiated
-extern __attribute__((__visibility__("default"))) Widget::virtual;
-void Widget::draw() { /* ... */ }
+VISIBLE Widget::virtual;
 ```
-
-----
-
-### Will these attributes ever be Standardized?
-
-- People have tried and failed, so far
-- Different platforms are too different (Windows/Unix)
 
 ====
 
