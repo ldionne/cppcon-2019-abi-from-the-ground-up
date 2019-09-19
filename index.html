@@ -87,29 +87,6 @@ But concepts mostly transfer
 
 ====
 
-### Why is ABI stability important?
-
-- Ship libraries to a system and update them without
-  + recompiling other system libraries
-  + recompiling all applications
-- Allows shipping static archives
-
-----
-
-### Breaking it means you need to rebuild
-
-Note:
-Can't rebuild if you don't have sources or no compiler on device, etc.
-
-----
-
-### Costs of ABI Stability
-
-1. Harder to evolve language and library
-2. Performance improvements may be hindered
-
-====
-
 ### What is an ABI?
 
 ----
@@ -127,6 +104,27 @@ Can't rebuild if you don't have sources or no compiler on device, etc.
 ----
 
 ### So ABI is like API for machine code
+
+====
+
+### Why is ABI stability important?
+
+- Distributing binaries without source code
+- Updating binaries without recompiling dependents
+
+----
+
+### Breaking it means you need to rebuild
+
+Note:
+Can't rebuild if you don't have sources or no compiler on device, etc.
+
+----
+
+### Costs of ABI Stability
+
+1. Harder to evolve language and library
+2. Performance improvements may be hindered
 
 ====
 
